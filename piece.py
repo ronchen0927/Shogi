@@ -1,264 +1,221 @@
 from typing import Tuple, List
 from abc import ABCMeta, abstractmethod
-from board import shogiBoard
+from utils import in_board
 
 class shogiPiece:
     __metaclass__ = ABCMeta
 
-    _GGeneral_pattern_up = [(0, 1), (1, 0), (0, -1), (-1, 0),
-                            (1, 1), (-1, 1)]
-    _GGeneral_pattern_dn = [(0, 1), (1, 0), (0, -1), (-1, 0),
-                            (1, -1), (-1, -1)]
+    _GGeneral_pattern = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0)]
 
-    def __init__(self, name: str, team: int, position: Tuple[int, int], promoted: bool = False) -> None:
+    def __init__(self, name: str, team: int, promoted: bool = False) -> None:
         self.name = name
-        self.team = team
-        self.position = position
+        self.team = team          # 0: Our team, 1: Enemy team
         self.promoted = promoted
 
     def __str__(self):
-        return self.name.lower() if self.team == 1 else self.name.upper()
+        return self.name
 
     @abstractmethod
-    def moves(self):
+    def get_valid_moves(self):
         pass
-
-    @abstractmethod
-    def promote(self):
-        pass
-
-    @abstractmethod
-    def unpromote(self):
-        pass
-
-    # Make sure that the position is inside the boundaries of the game board
-    @classmethod
-    def _in_bound(cls, position: Tuple[int, int]) -> bool:
-        x, y = position
-        return 0 <= x <= 9 and 0 <= y <= 9
     
     # Pattern provided to this function dictates the directions in which the piece may move
-    def pattern_check(self, pattern: List[Tuple[int, int]], shogi_board: shogiBoard) -> List[Tuple[int, int]]:
-        x, y = self.position
-        opposite_team = -self.team
+    def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        src_r, src_c = position
+        enemy_team = 1 - self.team
         possible_moves = []
 
-        for dx, dy in pattern:
-            nx, ny = x + dx, y + dy
+        for pr, pc in pattern:
+            dst_r, dst_c = src_r + pr, src_c + pc
 
-            if shogiPiece._in_bound((nx, ny)):
-                if not shogi_board.has_piece((nx, ny)) or shogi_board.board[nx][ny].team == opposite_team:
-                    possible_moves.append((nx, ny))
-                else:
-                    break
+            if in_board((dst_r, dst_c)):
+                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
+                    possible_moves.append((dst_r, dst_c))
         
         return possible_moves
     
     # Loop check diagonals or cardinal directions in the case of a rook or bishop that can move like this
-    def loop_pattern_check(self, pattern: List[Tuple[int, int]], shogi_board: shogiBoard) -> List[Tuple[int, int]]:
-        x, y = self.position
-        opposite_team = -self.team
+    def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        src_r, src_c = position
+        enemy_team = 1 - self.team
         possible_moves = []
 
-        for dx, dy in pattern:
-            nx, ny = x + dx, y + dy
+        for pr, pc in pattern:
+            dst_r, dst_c = src_r + pr, src_c + pc
 
-            while shogiPiece._in_bound((nx, ny)):
-                if not shogi_board.has_piece((nx, ny)) or shogi_board.board[nx][ny].team == opposite_team:
-                    possible_moves.append((nx, ny))
+            if in_board((dst_r, dst_c)):
+                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
+                    possible_moves.append((dst_r, dst_c))
+
+            while in_board((dst_r, dst_c)):
+                if not board[dst_r][dst_c]  or board[dst_r][dst_c].team == enemy_team:
+                    possible_moves.append((dst_r, dst_c))
                 else:
                     break
 
-                nx += dx
-                ny += dy
+                dst_r += pr
+                dst_c += pc
         
         return possible_moves
     
 
 class King(shogiPiece):
-    _king_pattern = [(0, 1), (1, 0), (0, -1), (-1, 0),
-                    (1, 1), (-1, 1), (1, -1), (-1, -1)]
+    '''
+    King mask:
+    [D, D, D],
+    [D, S, D],
+    [D, D, D]
+    '''
+    _king_pattern = [(-1, -1), (-1, 0), (-1, -1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
     
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        moves = self.pattern_check(self._king_pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        moves = self.pattern_check(self._king_pattern, position, board)
         return moves
-    
-    def promote(self):
-        raise Exception('Illegal move, King cannot be promoted')
-
-    def unpromote(self):
-        raise Exception('Illegal move, King cannot be promoted')
 
 
 class Rook(shogiPiece):
-    _rook_pattern = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-    _king_pattern = [(1, 1), (-1, 1), (1, -1), (-1, -1)]  # Including promoted pattern.
+    '''
+    Rook mask:
+    [D, E, D],
+    [E, S, E],
+    [D, E, D]
+    '''
+    _rook_pattern = [(-1, 0), (0, -1), (0, 1), (1, 0)]
+    _king_pattern = [(-1, -1), (-1, 1), (1, -1), (1, 1)]  # Including promoted pattern.
 
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        moves = self.loop_pattern_check(self._rook_pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        moves = self.loop_pattern_check(self._rook_pattern, position, board)
         if self.promoted:
-            moves.extend(self.pattern_check(self._king_pattern, board))
+            moves.extend(self.pattern_check(self._king_pattern, position, board))
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
 
 
 class Bishop(shogiPiece):
-    _bishop_pattern = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-    _king_pattern = [(1, 1), (-1, 1), (1, -1), (-1, -1)]  # Including promoted pattern.
+    '''
+    Bishop mask:
+    [D, E, D],
+    [E, S, E],
+    [D, E, D]
+    '''
+    _bishop_pattern = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+    _king_pattern = [(-1, 0), (0, -1), (0, 1), (1, 0)]  # Including promoted pattern.
 
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        moves = self.loop_pattern_check(self._bishop_pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        moves = self.loop_pattern_check(self._bishop_pattern, position, board)
         if self.promoted:
-            moves.extend(self.pattern_check(self._king_pattern, board))
+            moves.extend(self.pattern_check(self._king_pattern, position, board))
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
 
 
 class GGeneral(shogiPiece):
-    _GGeneral_pattern_up = shogiPiece._GGeneral_pattern_up
-    _GGeneral_pattern_dn = shogiPiece._GGeneral_pattern_dn
+    '''
+    GGeneral mask:
+    [D, D, D],
+    [D, S, D],
+    [E, D, E]
+    '''
+    _GGeneral_pattern = shogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):
-        return self._GGeneralPattern_up if self.team == 1 else self._GGeneralPattern_dn
+        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
 
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        moves = self.pattern_check(self._pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        moves = self.pattern_check(self._pattern, position, board)
         return moves
-    
-    def promote(self):
-        raise Exception('Illegal move, Golden General cannot be promoted')
-
-    def unpromote(self):
-        raise Exception('Illegal move, Golden General cannot be promoted')
 
 
 class SGeneral(shogiPiece):
-    _SGeneral_pattern_up = [(1, 1), (-1, 1), (1, -1), (-1, -1),
-                            (0, 1)]
-    _SGeneral_pattern_dn = [(1, 1), (-1, 1), (1, -1), (-1, -1),
-                            (0, -1)]
+    '''
+    SGeneral mask:
+    [D, D, D],
+    [E, S, E],
+    [D, E, D]
+    '''
+    _SGeneral_pattern = [(-1, -1), (-1, 0), (-1, 1), (1, -1), (1, 1)]
     
     @property
     def _pattern(self):
-        return self._SGeneral_pattern_up if self.team == 1 else self._SGeneral_pattern_dn
+        return self._SGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._SGeneral_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern_up if self.team == 1 else self._GGeneral_pattern_dn
+        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        if not self.promoted:
-            pattern = self._pattern
-        else:
-            pattern = self._pattern_promoted
-        
-        moves = self.pattern_check(pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        pattern = self._pattern_promoted if self.promoted else self._pattern
+        moves = self.pattern_check(pattern, position, board)
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
 
 
 class Knight(shogiPiece):
-    _Kinght_pattern_up = [(-1, 2), (1, 2)]
-    _Kinght_pattern_dn = [(-1, -2), (1, -2)]
-    _GGeneral_pattern_up = shogiPiece._GGeneral_pattern_up
-    _GGeneral_pattern_dn = shogiPiece._GGeneral_pattern_dn
+    '''
+    Knight mask:
+    [D, E, D],
+    [E, E, E],
+    [E, S, E]
+    '''
+    _Kinght_pattern = [(-2, -1), (-2, 1)]
+    _GGeneral_pattern = shogiPiece._GGeneral_pattern
     
     @property
     def _pattern(self):
-        return self._Kinght_pattern_dn if self.team == 1 else self._Kinght_pattern_dn
+        return self._Kinght_pattern if self.team == 0 else [(-r, c) for r, c in self._Kinght_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern_up if self.team == 1 else self._GGeneral_pattern_dn
+        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        if not self.promoted:
-            pattern = self._pattern
-        else:
-            pattern = self._pattern_promoted
-
-        moves = self.pattern_check(pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        pattern = self._pattern_promoted if self.promoted else self._pattern
+        moves = self.pattern_check(pattern, position, board)
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
 
 
 class Lance(shogiPiece):
-    _Lance_pattern_up = [(0, 1)]
-    _Lance_pattern_dn = [(0, -1)]
-    _GGeneral_pattern_up = shogiPiece._GGeneral_pattern_up
-    _GGeneral_pattern_dn = shogiPiece._GGeneral_pattern_dn
+    '''
+    Lance mask:
+    [E, D, E],
+    [E, S, E],
+    [E, E, E]
+    '''
+    _Lance_pattern = [(-1, 0)]
+    _GGeneral_pattern = shogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):
-        return self._Lance_pattern_up if self.team == 1 else self._Lance_pattern_dn
+        return self._Lance_pattern if self.team == 0 else [(-r, c) for r, c in self._Lance_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern_up if self.team == 1 else self._GGeneral_pattern_dn
+        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        if not self.promoted:
-            pattern = self._pattern
-        else:
-            pattern = self._pattern_promoted
-
-        moves = self.loop_pattern_check(pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        pattern = self._pattern_promoted if self.promoted else self._pattern
+        moves = self.loop_pattern_check(pattern, position, board)
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
 
 
 class Pawn(shogiPiece):
-    _Pawn_pattern_up = [(0, 1)]
-    _Pawn_pattern_dn = [(0, -1)]
-    _GGeneral_pattern_up = shogiPiece._GGeneral_pattern_up
-    _GGeneral_pattern_dn = shogiPiece._GGeneral_pattern_dn
+    '''
+    Pawn mask:
+    [E, D, E],
+    [E, S, E],
+    [E, E, E]
+    '''
+    _Pawn_pattern = [(-1, 0)]
+    _GGeneral_pattern = shogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):
-        return self._Pawn_pattern_up if self.team == 1 else self._Pawn_pattern_dn
+        return self._Pawn_pattern if self.team == 0 else [(-r, c) for r, c in self._Pawn_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern_up if self.team == 1 else self._GGeneral_pattern_dn
+        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def moves(self, board: shogiBoard) -> List[Tuple[int, int]]:
-        if not self.promoted:
-            pattern = self._pattern
-        else:
-            pattern = self._pattern_promoted
-
-        print(pattern)
-        moves = self.pattern_check(pattern, board)
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+        pattern = self._pattern_promoted if self.promoted else self._pattern
+        print(f"pattern: {pattern}")
+        moves = self.pattern_check(pattern, position, board)
         return moves
-    
-    def promote(self):
-        self.promoted = True
-
-    def unpromote(self):
-        self.promoted = False
