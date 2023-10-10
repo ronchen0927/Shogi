@@ -43,10 +43,6 @@ class shogiPiece:
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
-            if in_board((dst_r, dst_c)):
-                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
-                    possible_moves.append((dst_r, dst_c))
-
             while in_board((dst_r, dst_c)):
                 if not board[dst_r][dst_c]  or board[dst_r][dst_c].team == enemy_team:
                     possible_moves.append((dst_r, dst_c))
@@ -216,6 +212,5 @@ class Pawn(shogiPiece):
     
     def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
         pattern = self._pattern_promoted if self.promoted else self._pattern
-        print(f"pattern: {pattern}")
         moves = self.pattern_check(pattern, position, board)
         return moves
