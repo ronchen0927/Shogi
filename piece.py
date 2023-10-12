@@ -1,8 +1,8 @@
 from typing import Tuple, List
 from abc import ABCMeta, abstractmethod
-from utils import in_board, parse_pos_to_string
+from utils import is_in_board, parse_pos_to_string
 
-class shogiPiece:
+class ShogiPiece:
     __metaclass__ = ABCMeta
 
     _GGeneral_pattern = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0)]
@@ -15,18 +15,18 @@ class shogiPiece:
         self.team = team          # 1: Our team, -1: Enemy team
         self.promoted = promoted
 
+
     def __repr__(self):
         return self.name
 
-    def __str__(self):
-        return self.name
 
     @abstractmethod
     def get_valid_moves(self):
         pass
     
+
     # Pattern provided to this function dictates the directions in which the piece may move
-    def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[str]:
+    def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board) -> List[str]:
         src_r, src_c = position
         enemy_team = -self.team
         possible_moves = []
@@ -34,20 +34,22 @@ class shogiPiece:
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
-            if in_board((dst_r, dst_c)):
+            if is_in_board((dst_r, dst_c)):
                 if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
                     move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
                     possible_moves.append(move_notation)
 
                     # 加上能升變的 move
-                    if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
-                        move_notation += '+'
-                        possible_moves.append(move_notation)
+                    if not board[src_r][src_c].promoted:
+                        if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                            move_notation += '+'
+                            possible_moves.append(move_notation)
         
         return possible_moves
     
+
     # Loop check diagonals or cardinal directions in the case of a rook or bishop that can move like this
-    def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[str]:
+    def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board) -> List[str]:
         src_r, src_c = position
         enemy_team = -self.team
         possible_moves = []
@@ -55,15 +57,16 @@ class shogiPiece:
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
-            while in_board((dst_r, dst_c)):
+            while is_in_board((dst_r, dst_c)):
                 if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
                     move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
                     possible_moves.append(move_notation)
 
                     # 加上能升變的 move
-                    if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
-                        move_notation += '+'
-                        possible_moves.append(move_notation)
+                    if not board[src_r][src_c].promoted:
+                        if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                            move_notation += '+'
+                            possible_moves.append(move_notation)
                 else:
                     break
 
@@ -71,9 +74,9 @@ class shogiPiece:
                 dst_c += pc
         
         return possible_moves
-    
 
-class King(shogiPiece):
+
+class King(ShogiPiece):
     '''
     King mask:
     [D, D, D],
@@ -87,7 +90,7 @@ class King(shogiPiece):
         return moves
 
 
-class Rook(shogiPiece):
+class Rook(ShogiPiece):
     '''
     Rook mask:
     [D, E, D],
@@ -104,7 +107,7 @@ class Rook(shogiPiece):
         return moves
 
 
-class Bishop(shogiPiece):
+class Bishop(ShogiPiece):
     '''
     Bishop mask:
     [D, E, D],
@@ -121,14 +124,14 @@ class Bishop(shogiPiece):
         return moves
 
 
-class GGeneral(shogiPiece):
+class GGeneral(ShogiPiece):
     '''
     GGeneral mask:
     [D, D, D],
     [D, S, D],
     [E, D, E]
     '''
-    _GGeneral_pattern = shogiPiece._GGeneral_pattern
+    _GGeneral_pattern = ShogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):
@@ -139,7 +142,7 @@ class GGeneral(shogiPiece):
         return moves
 
 
-class SGeneral(shogiPiece):
+class SGeneral(ShogiPiece):
     '''
     SGeneral mask:
     [D, D, D],
@@ -162,7 +165,7 @@ class SGeneral(shogiPiece):
         return moves
 
 
-class Knight(shogiPiece):
+class Knight(ShogiPiece):
     '''
     Knight mask:
     [D, E, D],
@@ -170,7 +173,7 @@ class Knight(shogiPiece):
     [E, S, E]
     '''
     _Kinght_pattern = [(-2, -1), (-2, 1)]
-    _GGeneral_pattern = shogiPiece._GGeneral_pattern
+    _GGeneral_pattern = ShogiPiece._GGeneral_pattern
     
     @property
     def _pattern(self):
@@ -186,7 +189,7 @@ class Knight(shogiPiece):
         return moves
 
 
-class Lance(shogiPiece):
+class Lance(ShogiPiece):
     '''
     Lance mask:
     [E, D, E],
@@ -194,7 +197,7 @@ class Lance(shogiPiece):
     [E, E, E]
     '''
     _Lance_pattern = [(-1, 0)]
-    _GGeneral_pattern = shogiPiece._GGeneral_pattern
+    _GGeneral_pattern = ShogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):
@@ -210,7 +213,7 @@ class Lance(shogiPiece):
         return moves
 
 
-class Pawn(shogiPiece):
+class Pawn(ShogiPiece):
     '''
     Pawn mask:
     [E, D, E],
@@ -218,7 +221,7 @@ class Pawn(shogiPiece):
     [E, E, E]
     '''
     _Pawn_pattern = [(-1, 0)]
-    _GGeneral_pattern = shogiPiece._GGeneral_pattern
+    _GGeneral_pattern = ShogiPiece._GGeneral_pattern
 
     @property
     def _pattern(self):

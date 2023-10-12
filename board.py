@@ -2,11 +2,11 @@ from typing import Tuple, List, Set
 from collections import defaultdict
 from utils import parse_string_to_pos, parse_drop_to_string
 from piece import *
-from player import shogiPlayer
+from player import ShogiPlayer
 
 import copy
-    
-class shogiBoard:
+
+class ShogiBoard:
     PIECES = {'K': King, 'R': Rook, 'B': Bishop, 'G': GGeneral, 'S': SGeneral, 'N': Knight, 'L': Lance, 'P': Pawn}
 
     OUR_PROMOTION_ZONE = [0, 1, 2]
@@ -27,13 +27,39 @@ class shogiBoard:
     KINGHT_LANCE_PIECE_NAME = ['n', 'l', 'N', 'L']
 
 
-    def __init__(self, player0: shogiPlayer, player1: shogiPlayer) -> None:
+    def __init__(self, player1: ShogiPlayer, player2: ShogiPlayer) -> None:
         self.board = [[None for _ in range(9)] for _ in range(9)]
-        self.our_player = player0
-        self.enemy_player = player1
+        self.our_player = player1
+        self.enemy_player = player2
         self.our_king_pos = (8, 4)
         self.enemy_king_pos = (0, 4)
         self.init_board()
+
+
+    def __repr__(self) -> str:
+        '''Print board for human to see'''
+        str_board = ""
+
+        for idx, row in enumerate(self.board):
+            row_content = []
+
+            for piece in row:
+                if piece:
+                    if piece.promoted:
+                        row_content.append(f"+{piece}|")
+                    else:
+                        row_content.append(f" {piece}|")
+                else:
+                    row_content.append("__|")
+
+            str_board += f"{9 - idx} |{''.join(row_content)}\n"
+
+        str_board += "    " + "  ".join([chr(idx + 97) for idx in range(9)]) + "\n"
+        str_board += "\n"
+        str_board += f"Our Captures: {' '.join(self.our_player.captured)}\n"
+        str_board += f"Enemy Captures: {' '.join(self.enemy_player.captured)}\n"
+
+        return str_board
 
 
     def init_board(self) -> None:
@@ -68,38 +94,14 @@ class shogiBoard:
 
 
     def _has_piece(self, board, position: Tuple[int, int]) -> bool:
-        if not in_board(position):
+        if not is_in_board(position):
             raise Exception("Incorrect position!")
 
         r, c = position
         return True if board[r][c] else False
     
-
-    def display_board(self) -> None:
-        '''Print self.board'''
-        for idx, row in enumerate(self.board):
-            row_content = []
-
-            for piece in row:
-                if piece:
-                    if piece.promoted:
-                        row_content.append(f"+{piece}|")
-                    else:
-                        row_content.append(f" {piece}|")
-                else:
-                    row_content.append("__|")
-
-            print(f"{9 - idx} |{''.join(row_content)}")
-
-        print("    " + "  ".join([chr(idx + 97) for idx in range(9)]))
-
-        print("\n")
-
-        print(f"Our Captures: {' '.join(self.our_player.captured)}")
-        print(f"Enemy Captures: {' '.join(self.enemy_player.captured)}")
     
-    
-    def execute_move(self, move_command: str, player: shogiPlayer) -> None:
+    def execute_move(self, move_command: str, player: ShogiPlayer) -> None:
         '''
         實際的移動步
 
@@ -117,12 +119,14 @@ class shogiBoard:
 
             # Execute move
             if not self._has_piece(board, (src_r, src_c)):
-                raise Exception("No piece in the position")
+                raise Exception("No piece in the position!")
             obj_piece = self.board[src_r][src_c]
             
+            if obj_piece.team != player.team:
+                raise Exception("You can't move opponent pieces!")
+            
             valid_moves = obj_piece.get_valid_moves((src_r, src_c), self.board)
-            print(f"move_command: {move_command}")
-            print(f"valid_moves: {valid_moves}")
+
             if move_command not in valid_moves:
                 raise Exception("This move is invalid!")
             elif self.board[dst_r][dst_c] and self.board[dst_r][dst_c].team == -player.team:
@@ -137,6 +141,7 @@ class shogiBoard:
             self.board[src_r][src_c] = None
             self.board[dst_r][dst_c] = obj_piece
 
+            # 紀錄王將/玉將的位置
             if obj_piece.name == 'k':
                 self.our_king_pos = (dst_r, dst_c)
             elif obj_piece.name == 'K':
@@ -158,7 +163,7 @@ class shogiBoard:
             self.board[dst_r][dst_c] = obj_piece
 
 
-    def _can_drop_piece(self, piece_name: str, drop_pos: Tuple[int, int], player: shogiPlayer) -> bool:
+    def _can_drop_piece(self, piece_name: str, drop_pos: Tuple[int, int], player: ShogiPlayer) -> bool:
         # 1. 檢查是否可以在指定位置打入棋子
         drop_r, drop_c = drop_pos
         board = copy.deepcopy(self.board)
@@ -193,13 +198,14 @@ class shogiBoard:
         return True
 
 
-    def is_in_check(self, board, player: shogiPlayer) -> bool:
+    def is_in_check(self, player: ShogiPlayer) -> bool:
         '''
         檢查王將/玉將是否被將軍
         '''
         king_pos = self.our_king_pos if player.team == 1 else self.enemy_king_pos
         all_enemy_pieces = self.ENEMY_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
         all_enemy_moves = []
+        board = copy.deepcopy(self.board)
 
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
@@ -210,12 +216,14 @@ class shogiBoard:
         return king_pos in all_enemy_moves
     
 
-    def _get_king_evade_moves(self, board, king_pos: Tuple[int, int], player: shogiPlayer) -> List[str]:
+    def _get_king_evade_moves(self, player: ShogiPlayer) -> List[str]:
         '''
         王將/玉將不會被將軍的移動
         '''
+        king_pos = self.our_king_pos if player.team == 1 else self.enemy_king_pos
         all_enemy_pieces = self.ENEMY_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
         all_enemy_moves = []
+        board = copy.deepcopy(self.board)
 
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
@@ -231,13 +239,14 @@ class shogiBoard:
         return king_safe_moves
 
 
-    def _get_piece_evade_moves(self, board, player: shogiPlayer) -> List[str]:
+    def _get_piece_evade_moves(self, player: ShogiPlayer) -> List[str]:
         '''
         檢查一般棋子移動後是否仍然被將軍，如果王將不再被將軍，則該移動是一個有效的閃避走步
         '''
         piece_evade_moves = []
         all_our_moves = []
         all_our_pieces = self.OUR_PIECES_NAME if player.team == 1 else self.ENEMY_PIECES_NAME
+        board = copy.deepcopy(self.board)
 
         for src_r, row in enumerate(board):
             for src_c, cell in enumerate(row):
@@ -269,10 +278,11 @@ class shogiBoard:
         return piece_evade_moves
 
 
-    def _get_drop_evade_moves(self, board, player: shogiPlayer) -> List[str]:
+    def _get_drop_evade_moves(self, player: ShogiPlayer) -> List[str]:
         all_evade_drops = []
         all_our_captured = player.captured
         all_empty_cells = self._get_all_empty_cells()
+        board = copy.deepcopy(self.board)
 
         for piece_name in all_our_captured:
             for drop_pos in all_empty_cells:
@@ -292,10 +302,10 @@ class shogiBoard:
         return all_evade_drops
 
 
-    def get_all_evade_moves(self, board, player: shogiPlayer):
-        all_evade_moves = self._get_king_evade_moves(board, player)
-        all_evade_moves.extend(self._get_piece_evade_moves(board, player))
-        all_evade_moves.extend(self._get_drop_evade_moves(board, player))
+    def get_all_evade_moves(self, player: ShogiPlayer):
+        all_evade_moves = self._get_king_evade_moves(player)
+        all_evade_moves.extend(self._get_piece_evade_moves(player))
+        all_evade_moves.extend(self._get_drop_evade_moves(player))
 
         return all_evade_moves
     
@@ -309,55 +319,3 @@ class shogiBoard:
                     all_empty_cells.append((r, c))
 
         return all_empty_cells
-    
-
-    def get_winner(self, our_player: shogiPlayer, enemy_player: shogiPlayer):
-        '''
-        Input:
-            player: current player (1 or -1)
-
-        Returns:
-            winner: 0 if game has not ended. 1 if player won, -1 if player lost,
-                    small non-zero value for draw.
-        '''
-        winner = 0
-        board = copy.deepcopy(self.board)
-
-        # 先檢查我方是否被將死
-        is_our_king_check = self.is_in_check(board, our_player)
-        all_evade_moves = self.get_all_evade_moves(board, our_player)
-        if is_our_king_check and len(all_evade_moves) == 0:
-            winner = enemy_player.team
-
-        # 再檢查敵方是否被將死
-        is_enemy_king_check = self.is_in_check(board, enemy_player)
-        all_evade_moves = self.get_all_evade_moves(board, our_player)
-        if is_enemy_king_check and len(all_evade_moves) == 0:
-            winner = our_player.team
-
-        return winner
-
-
-if __name__ == '__main__':
-    player1 = shogiPlayer(1)
-    player2 = shogiPlayer(-1)
-    board = shogiBoard(player0=player1, player1=player2)
-    
-    board.display_board()
-
-    board.execute_move('a3a4', player1)
-    board.execute_move('a4a5', player1)
-    board.execute_move('a5a6', player1)
-    board.execute_move('a6a7+', player1)
-    board.execute_move('a7a8', player1)
-    board.execute_move('a8b8', player1)
-    board.display_board()
-    
-    board.execute_move('f7f6', player2)
-    board.display_board()
-
-    board.execute_move('P*a8', player1)
-    board.display_board()
-
-    board.execute_move('R*g5', player1)
-    board.display_board()

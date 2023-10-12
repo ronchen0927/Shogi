@@ -1,8 +1,8 @@
 from typing import Tuple
 
-def in_board(position: Tuple[int, int]) -> bool:
+def is_in_board(position: Tuple[int, int]) -> bool:
     r, c = position
-    return 0 <= r <= 9 and 0 <= c <= 9
+    return 0 <= r <= 8 and 0 <= c <= 8
 
 def parse_string_to_pos(notation: str) -> Tuple[int, int, bool]:
     row = 9 - int(notation[1])
