@@ -1,16 +1,22 @@
 from typing import Tuple, List
 from abc import ABCMeta, abstractmethod
-from utils import in_board
+from utils import in_board, parse_pos_to_string
 
 class shogiPiece:
     __metaclass__ = ABCMeta
 
     _GGeneral_pattern = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0)]
 
+    OUR_PROMOTION_ZONE = [0, 1, 2]
+    ENEMY_PROMOTION_ZONE = [6, 7, 8]
+
     def __init__(self, name: str, team: int, promoted: bool = False) -> None:
         self.name = name
-        self.team = team          # 0: Our team, 1: Enemy team
+        self.team = team          # 1: Our team, -1: Enemy team
         self.promoted = promoted
+
+    def __repr__(self):
+        return self.name
 
     def __str__(self):
         return self.name
@@ -20,9 +26,9 @@ class shogiPiece:
         pass
     
     # Pattern provided to this function dictates the directions in which the piece may move
-    def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         src_r, src_c = position
-        enemy_team = 1 - self.team
+        enemy_team = -self.team
         possible_moves = []
 
         for pr, pc in pattern:
@@ -30,22 +36,34 @@ class shogiPiece:
 
             if in_board((dst_r, dst_c)):
                 if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
-                    possible_moves.append((dst_r, dst_c))
+                    move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
+                    possible_moves.append(move_notation)
+
+                    # 加上能升變的 move
+                    if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                        move_notation += '+'
+                        possible_moves.append(move_notation)
         
         return possible_moves
     
     # Loop check diagonals or cardinal directions in the case of a rook or bishop that can move like this
-    def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         src_r, src_c = position
-        enemy_team = 1 - self.team
+        enemy_team = -self.team
         possible_moves = []
 
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
             while in_board((dst_r, dst_c)):
-                if not board[dst_r][dst_c]  or board[dst_r][dst_c].team == enemy_team:
-                    possible_moves.append((dst_r, dst_c))
+                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
+                    move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
+                    possible_moves.append(move_notation)
+
+                    # 加上能升變的 move
+                    if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                        move_notation += '+'
+                        possible_moves.append(move_notation)
                 else:
                     break
 
@@ -64,7 +82,7 @@ class King(shogiPiece):
     '''
     _king_pattern = [(-1, -1), (-1, 0), (-1, -1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
     
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         moves = self.pattern_check(self._king_pattern, position, board)
         return moves
 
@@ -79,7 +97,7 @@ class Rook(shogiPiece):
     _rook_pattern = [(-1, 0), (0, -1), (0, 1), (1, 0)]
     _king_pattern = [(-1, -1), (-1, 1), (1, -1), (1, 1)]  # Including promoted pattern.
 
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         moves = self.loop_pattern_check(self._rook_pattern, position, board)
         if self.promoted:
             moves.extend(self.pattern_check(self._king_pattern, position, board))
@@ -96,7 +114,7 @@ class Bishop(shogiPiece):
     _bishop_pattern = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
     _king_pattern = [(-1, 0), (0, -1), (0, 1), (1, 0)]  # Including promoted pattern.
 
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         moves = self.loop_pattern_check(self._bishop_pattern, position, board)
         if self.promoted:
             moves.extend(self.pattern_check(self._king_pattern, position, board))
@@ -114,9 +132,9 @@ class GGeneral(shogiPiece):
 
     @property
     def _pattern(self):
-        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
+        return self._GGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._GGeneral_pattern]
 
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         moves = self.pattern_check(self._pattern, position, board)
         return moves
 
@@ -132,13 +150,13 @@ class SGeneral(shogiPiece):
     
     @property
     def _pattern(self):
-        return self._SGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._SGeneral_pattern]
+        return self._SGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._SGeneral_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
+        return self._GGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         pattern = self._pattern_promoted if self.promoted else self._pattern
         moves = self.pattern_check(pattern, position, board)
         return moves
@@ -156,13 +174,13 @@ class Knight(shogiPiece):
     
     @property
     def _pattern(self):
-        return self._Kinght_pattern if self.team == 0 else [(-r, c) for r, c in self._Kinght_pattern]
+        return self._Kinght_pattern if self.team == 1 else [(-r, c) for r, c in self._Kinght_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
+        return self._GGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         pattern = self._pattern_promoted if self.promoted else self._pattern
         moves = self.pattern_check(pattern, position, board)
         return moves
@@ -180,13 +198,13 @@ class Lance(shogiPiece):
 
     @property
     def _pattern(self):
-        return self._Lance_pattern if self.team == 0 else [(-r, c) for r, c in self._Lance_pattern]
+        return self._Lance_pattern if self.team == 1 else [(-r, c) for r, c in self._Lance_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
+        return self._GGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         pattern = self._pattern_promoted if self.promoted else self._pattern
         moves = self.loop_pattern_check(pattern, position, board)
         return moves
@@ -204,13 +222,13 @@ class Pawn(shogiPiece):
 
     @property
     def _pattern(self):
-        return self._Pawn_pattern if self.team == 0 else [(-r, c) for r, c in self._Pawn_pattern]
+        return self._Pawn_pattern if self.team == 1 else [(-r, c) for r, c in self._Pawn_pattern]
     
     @property
     def _pattern_promoted(self):
-        return self._GGeneral_pattern if self.team == 0 else [(-r, c) for r, c in self._GGeneral_pattern]
+        return self._GGeneral_pattern if self.team == 1 else [(-r, c) for r, c in self._GGeneral_pattern]
     
-    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[Tuple[int, int]]:
+    def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         pattern = self._pattern_promoted if self.promoted else self._pattern
         moves = self.pattern_check(pattern, position, board)
         return moves
