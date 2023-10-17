@@ -10,17 +10,17 @@ class ShogiBoard:
     PIECES = {'K': King, 'R': Rook, 'B': Bishop, 'G': GGeneral, 'S': SGeneral, 'N': Knight, 'L': Lance, 'P': Pawn}
 
     OUR_PROMOTION_ZONE = [0, 1, 2]
-    ENEMY_PROMOTION_ZONE = [6, 7, 8]
+    OPPONENT_PROMOTION_ZONE = [6, 7, 8]
     
     OUR_NL_DROP_FORBIDDEN_ZONE = [7, 8]
-    ENEMY_NL_DROP_FORBIDDEN_ZONE = [0, 1]
+    OPPONENT_NL_DROP_FORBIDDEN_ZONE = [0, 1]
 
     OUR_P_DROP_FORBIDDEN_ZONE = 8
-    ENEMY_P_DROP_FORBIDDEN_ZONE = 0
+    OPPONENT_P_DROP_FORBIDDEN_ZONE = 0
 
     OUR_PIECES_NAME = ['r', 'b', 'g', 's', 'n', 'l', 'p',
                        '+r', '+b', '+g', '+s', '+n', '+l', '+p']
-    ENEMY_PIECES_NAME = ['R', 'B', 'G', 'S', 'N', 'L', 'P',
+    OPPONENT_PIECES_NAME = ['R', 'B', 'G', 'S', 'N', 'L', 'P',
                          '+R', '+B', '+G', '+S', '+N', '+L', '+P']
     
     PAWN_PIECE_NAME = ['p', 'P']
@@ -30,9 +30,9 @@ class ShogiBoard:
     def __init__(self, player1: ShogiPlayer, player2: ShogiPlayer) -> None:
         self.board = [[None for _ in range(9)] for _ in range(9)]
         self.our_player = player1
-        self.enemy_player = player2
+        self.opponent_player = player2
         self.our_king_pos = (8, 4)
-        self.enemy_king_pos = (0, 4)
+        self.opponent_king_pos = (0, 4)
         self.init_board()
 
 
@@ -57,7 +57,7 @@ class ShogiBoard:
         str_board += "    " + "  ".join([chr(idx + 97) for idx in range(9)]) + "\n"
         str_board += "\n"
         str_board += f"Our Captures: {' '.join(self.our_player.captured)}\n"
-        str_board += f"Enemy Captures: {' '.join(self.enemy_player.captured)}\n"
+        str_board += f"Opponent Captures: {' '.join(self.opponent_player.captured)}\n"
 
         return str_board
 
@@ -78,9 +78,9 @@ class ShogiBoard:
             a  b  c  d  e  f  g  h  i
 
         Our Captures:
-        Enemy Captures:
+        Opponent Captures:
         '''
-        # Enemy pieces (team = -1)
+        # Opponent pieces (team = -1)
         self.board[0] = [Lance('L', -1), Knight('N', -1), SGeneral('S', -1), GGeneral('G', -1), King('K', -1), GGeneral('G', -1), SGeneral('S', -1), Knight('N', -1), Lance('L', -1)]
         self.board[1][1] = Rook('R', -1)
         self.board[1][7] = Bishop('B', -1)
@@ -134,7 +134,7 @@ class ShogiBoard:
             
             # Promote!
             if is_promoted:
-                if obj_piece.promoted or (player.team == 1 and dst_r not in self.OUR_PROMOTION_ZONE) or (player.team == -1 and dst_r not in self.ENEMY_PROMOTION_ZONE):
+                if obj_piece.promoted or (player.team == 1 and dst_r not in self.OUR_PROMOTION_ZONE) or (player.team == -1 and dst_r not in self.OPPONENT_PROMOTION_ZONE):
                     raise Exception("This move can't promote!")
                 obj_piece.promoted = True
             
@@ -145,7 +145,7 @@ class ShogiBoard:
             if obj_piece.name == 'k':
                 self.our_king_pos = (dst_r, dst_c)
             elif obj_piece.name == 'K':
-                self.enemy_king_pos = (dst_r, dst_c)
+                self.opponent_king_pos = (dst_r, dst_c)
         else:
             piece_name, _ = move_command[:2]
             dst_r, dst_c, _ = parse_string_to_pos(move_command[2:])  # Drop piece hasn't promotion.
@@ -173,10 +173,10 @@ class ShogiBoard:
 
         # 2. 禁止打入無法移動的棋子
         if piece_name in self.KINGHT_LANCE_PIECE_NAME:  # 檢查桂馬與香車
-            if (player.team == 1 and drop_r in self.OUR_NL_DROP_FORBIDDEN_ZONE) or (player.team == -1 and drop_r in self.ENEMY_NL_DROP_FORBIDDEN_ZONE):
+            if (player.team == 1 and drop_r in self.OUR_NL_DROP_FORBIDDEN_ZONE) or (player.team == -1 and drop_r in self.OPPONENT_NL_DROP_FORBIDDEN_ZONE):
                 return False
         elif piece_name in self.PAWN_PIECE_NAME:  # 檢查步兵
-            if (player.team == 1 and drop_r == self.OUR_P_DROP_FORBIDDEN_ZONE) or (player.team == -1 and drop_r == self.ENEMY_P_DROP_FORBIDDEN_ZONE):
+            if (player.team == 1 and drop_r == self.OUR_P_DROP_FORBIDDEN_ZONE) or (player.team == -1 and drop_r == self.OPPONENT_P_DROP_FORBIDDEN_ZONE):
                 return False
 
         if piece_name in self.PAWN_PIECE_NAME:
@@ -202,40 +202,40 @@ class ShogiBoard:
         '''
         檢查王將/玉將是否被將軍
         '''
-        king_pos = self.our_king_pos if player.team == 1 else self.enemy_king_pos
-        all_enemy_pieces = self.ENEMY_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
-        all_enemy_moves = []
+        king_pos = self.our_king_pos if player.team == 1 else self.opponent_king_pos
+        all_opponent_pieces = self.OPPONENT_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
+        all_opponent_moves = []
         board = copy.deepcopy(self.board)
 
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
-                if cell in all_enemy_pieces:
+                if cell in all_opponent_pieces:
                     valid_moves = cell.get_valid_moves((r, c), board)
-                    all_enemy_moves.append(valid_moves)
+                    all_opponent_moves.append(valid_moves)
 
-        return king_pos in all_enemy_moves
+        return king_pos in all_opponent_moves
     
 
     def _get_king_evade_moves(self, player: ShogiPlayer) -> List[str]:
         '''
         王將/玉將不會被將軍的移動
         '''
-        king_pos = self.our_king_pos if player.team == 1 else self.enemy_king_pos
-        all_enemy_pieces = self.ENEMY_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
-        all_enemy_moves = []
+        king_pos = self.our_king_pos if player.team == 1 else self.opponent_king_pos
+        all_opponent_pieces = self.OPPONENT_PIECES_NAME if player.team == 1 else self.OUR_PIECES_NAME
+        all_opponent_moves = []
         board = copy.deepcopy(self.board)
 
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
-                if cell in all_enemy_pieces:
+                if cell in all_opponent_pieces:
                     valid_moves = cell.get_valid_moves((r, c), self.board)
-                    all_enemy_moves.append(valid_moves)
+                    all_opponent_moves.append(valid_moves)
         
         king_r, king_c = king_pos
         king = self.board[king_r][king_c]
         king_valid_moves = king.get_valid_moves((king_r, king_c), self.board)
         
-        king_safe_moves = list(set(king_valid_moves) - set(all_enemy_moves))
+        king_safe_moves = list(set(king_valid_moves) - set(all_opponent_moves))
         return king_safe_moves
 
 
@@ -245,7 +245,7 @@ class ShogiBoard:
         '''
         piece_evade_moves = []
         all_our_moves = []
-        all_our_pieces = self.OUR_PIECES_NAME if player.team == 1 else self.ENEMY_PIECES_NAME
+        all_our_pieces = self.OUR_PIECES_NAME if player.team == 1 else self.OPPONENT_PIECES_NAME
         board = copy.deepcopy(self.board)
 
         for src_r, row in enumerate(board):

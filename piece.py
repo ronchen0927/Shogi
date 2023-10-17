@@ -8,11 +8,11 @@ class ShogiPiece:
     _GGeneral_pattern = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0)]
 
     OUR_PROMOTION_ZONE = [0, 1, 2]
-    ENEMY_PROMOTION_ZONE = [6, 7, 8]
+    OPPONENT_PROMOTION_ZONE = [6, 7, 8]
 
     def __init__(self, name: str, team: int, promoted: bool = False) -> None:
         self.name = name
-        self.team = team          # 1: Our team, -1: Enemy team
+        self.team = team          # 1: Our team, -1: Opponent team
         self.promoted = promoted
 
 
@@ -28,20 +28,20 @@ class ShogiPiece:
     # Pattern provided to this function dictates the directions in which the piece may move
     def pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board) -> List[str]:
         src_r, src_c = position
-        enemy_team = -self.team
+        opponent_team = -self.team
         possible_moves = []
 
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
             if is_in_board((dst_r, dst_c)):
-                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
+                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == opponent_team:
                     move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
                     possible_moves.append(move_notation)
 
                     # 加上能升變的 move
                     if not board[src_r][src_c].promoted:
-                        if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                        if (self.team != opponent_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == opponent_team and dst_r in self.OPPONENT_PROMOTION_ZONE):
                             move_notation += '+'
                             possible_moves.append(move_notation)
         
@@ -51,20 +51,20 @@ class ShogiPiece:
     # Loop check diagonals or cardinal directions in the case of a rook or bishop that can move like this
     def loop_pattern_check(self, pattern: List[Tuple[int, int]], position: Tuple[int, int], board) -> List[str]:
         src_r, src_c = position
-        enemy_team = -self.team
+        opponent_team = -self.team
         possible_moves = []
 
         for pr, pc in pattern:
             dst_r, dst_c = src_r + pr, src_c + pc
 
             while is_in_board((dst_r, dst_c)):
-                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == enemy_team:
+                if not board[dst_r][dst_c] or board[dst_r][dst_c].team == opponent_team:
                     move_notation = parse_pos_to_string((src_r, src_c), (dst_r, dst_c))
                     possible_moves.append(move_notation)
 
                     # 加上能升變的 move
                     if not board[src_r][src_c].promoted:
-                        if (self.team != enemy_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == enemy_team and dst_r in self.ENEMY_PROMOTION_ZONE):
+                        if (self.team != opponent_team and dst_r in self.OUR_PROMOTION_ZONE) or (self.team == opponent_team and dst_r in self.OPPONENT_PROMOTION_ZONE):
                             move_notation += '+'
                             possible_moves.append(move_notation)
                 else:

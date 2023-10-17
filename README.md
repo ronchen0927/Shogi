@@ -17,7 +17,7 @@
     a  b  c  d  e  f  g  h  i
 
 Our Captures:
-Enemy Captures:
+Opponent Captures:
 ```
 ## Usage
 
