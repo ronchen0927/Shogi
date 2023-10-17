@@ -51,6 +51,8 @@ class ShogiGame:
                 if result:
                     # Game over
                     winner = result
+                    # Final board
+                    print(self.board)
 
                     if winner == 1:
                         print(f"Winner is {self.players[0].name}")

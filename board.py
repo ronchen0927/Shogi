@@ -191,7 +191,7 @@ class ShogiBoard:
                 obj_piece = self.PIECES[piece_name.upper()](piece_name.upper(), -1)
 
             board[drop_r][drop_c] = obj_piece
-            if self.is_in_check(board, player) and len(self.get_all_evade_moves(board, player)) == 0:
+            if self.is_in_check(player) and len(self.get_all_evade_moves(player)) == 0:
                 return False
             board[drop_r][drop_c] = None
 
@@ -265,7 +265,7 @@ class ShogiBoard:
                 piece.promoted = True
             board[dst_r][dst_c] = piece
 
-            if not self.is_in_check(board, player):  # 檢查移動後王將是否仍然被將軍
+            if not self.is_in_check(player):  # 檢查移動後王將是否仍然被將軍
                 piece_evade_moves.append(move)
 
             # 檢查後盤面需復原
@@ -292,7 +292,7 @@ class ShogiBoard:
                 if self._can_drop_piece(piece_name, drop_pos, player):
                     board[dst_r][dst_c] = piece_name
 
-                if not self.is_in_check(board, player):  # 檢查移動後王將是否仍然被將軍
+                if not self.is_in_check(player):  # 檢查移動後王將是否仍然被將軍
                     move = parse_drop_to_string(piece_name, drop_pos)
                     all_evade_drops.append(move)
 
@@ -300,14 +300,6 @@ class ShogiBoard:
                 board[dst_r][dst_c] = None
 
         return all_evade_drops
-
-
-    def get_all_evade_moves(self, player: ShogiPlayer):
-        all_evade_moves = self._get_king_evade_moves(player)
-        all_evade_moves.extend(self._get_piece_evade_moves(player))
-        all_evade_moves.extend(self._get_drop_evade_moves(player))
-
-        return all_evade_moves
     
 
     def _get_all_empty_cells(self) -> List[Tuple[int, int]]:
@@ -319,3 +311,11 @@ class ShogiBoard:
                     all_empty_cells.append((r, c))
 
         return all_empty_cells
+
+
+    def get_all_evade_moves(self, player: ShogiPlayer):
+        all_evade_moves = self._get_king_evade_moves(player)
+        all_evade_moves.extend(self._get_piece_evade_moves(player))
+        all_evade_moves.extend(self._get_drop_evade_moves(player))
+
+        return all_evade_moves
