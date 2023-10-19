@@ -27,15 +27,15 @@ python game.py
 ```
 
 ## How to Play
-### Move
 
+### Move
 Move piece a3 to a4
 ```
 a3a4
 ```
 
-Move piece h6 to h7 and promote
 ### Promotion move
+Move piece h6 to h7 and promote
 ```
 h6h7+
 ```
