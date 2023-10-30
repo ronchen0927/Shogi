@@ -155,7 +155,7 @@ class ShogiBoard:
                 raise Exception("Can't drop to the position!")
             
             if player.team == 1:
-                obj_piece = self.PIECES[piece_name](piece_name.lower(), 1)
+                obj_piece = self.PIECES[piece_name.upper()](piece_name.lower(), 1)
             else:
                 obj_piece = self.PIECES[piece_name.upper()](piece_name.upper(), -1)
 
