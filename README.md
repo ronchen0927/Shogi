@@ -41,13 +41,11 @@ h6h7+
 ```
 
 ### Drop
-Drop "Pawn" to d4 (No case distinction)
+Drop "Pawn" to d4
 ```
 P*d4
-p*d4
 ```
 Drop "Rook" to g5
 ```
 R*g5
-r*g5
 ```
