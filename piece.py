@@ -83,7 +83,7 @@ class King(ShogiPiece):
     [D, S, D],
     [D, D, D]
     '''
-    _king_pattern = [(-1, -1), (-1, 0), (-1, -1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    _king_pattern = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
     
     def get_valid_moves(self, position: Tuple[int, int], board: List[List[int]]) -> List[str]:
         moves = self.pattern_check(self._king_pattern, position, board)
