@@ -1,11 +1,12 @@
 from player import ShogiPlayer
 from board import ShogiBoard
+from piece import *
 
 class ShogiGame:
     def __init__(self) -> None:
         self.players = [ShogiPlayer("Gojo Satoru", 1), ShogiPlayer("Geto Suguru", -1)]
         self.board = ShogiBoard(self.players[0], self.players[1])
-        self.current_player, self.next_player = self.players[0], self.players[1]
+        self.current_player = self.players[0]
         self.game_round = 0
 
 
@@ -38,16 +39,15 @@ class ShogiGame:
     def play(self):
         while True:
             self.current_player = self.players[self.game_round % 2]
-            self.next_player = self.players[1 - self.game_round % 2]
 
             print(f"Round: {self.game_round + 1}\nCurrent Player : {self.current_player.name}\n")
             print(self.board)
 
-            input_move = input('Input your move: ').strip()
+            input_move = input('Input your move: ').replace(" ", "")  # truncation all space
 
             try:
                 self.board.execute_move(input_move, self.current_player)
-                result = self.get_game_ended(self.current_player, self.next_player)
+                result = self.get_game_ended(self.players[0], self.players[1])
 
                 if result:
                     # Game over
@@ -56,9 +56,9 @@ class ShogiGame:
                     print(self.board)
 
                     if winner == 1:
-                        print(f"Winner is {self.current_player.name}")
+                        print(f"Winner is {self.players[0].name}")
                     else:
-                        print(f"Winner is {self.next_player.name}")
+                        print(f"Winner is {self.players[1].name}")
 
                     break
                 
@@ -72,4 +72,22 @@ class ShogiGame:
 
 if __name__ == "__main__":
     game = ShogiGame()
+
+    dabujie_board = [[None for _ in range(9)] for _ in range(9)]  # 打步詰盤面測試
+    dabujie_board[0] = [Lance('L', -1), None, None, None, None, None, None, Knight('N', -1), Lance('L', -1)]
+    dabujie_board[1] = [None, None, None, Rook('r', 1), Bishop('b', 1, True), Knight('N', -1), King('K', -1), None, None]
+    dabujie_board[2] = [None, GGeneral('G', -1), None, Pawn('p', 1), Pawn('P', -1), Pawn('P', -1), None, None, Pawn('P', -1)]
+    dabujie_board[3] = [None, None, Pawn('P', -1), None, None, None, None, None, None]
+    dabujie_board[4] = [None, None, None, None, SGeneral('S', -1), None, SGeneral('s', 1), SGeneral('S', -1), Pawn('p', 1)]
+    dabujie_board[5] = [None, King('k', 1), Bishop('B', -1), Pawn('P', -1), None, None, None, None, Rook('r', 1)]
+    dabujie_board[6] = [Pawn('p', 1), None, None, SGeneral('S', -1), Pawn('p', 1), Pawn('p', 1), Pawn('P', -1), None, None]
+    dabujie_board[7] = [None, None, GGeneral('G', -1), None, None, None, None, Pawn('P', -1, True), None]
+    dabujie_board[8] = [Lance('l', 1), None, None, None, None, None, None, Knight('n', 1), Lance('l', 1)]
+    game.players[0].captured = ['P', 'P', 'P', 'P', 'P', 'N', 'G', 'G']
+    game.players[1].captured = ['p']
+    game.board.our_king_pos = (5, 1)
+    game.board.opponent_king_pos = (1, 6)
+
+    game.board.insert_board(dabujie_board)
+
     game.play()

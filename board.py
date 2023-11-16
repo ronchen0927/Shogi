@@ -207,8 +207,11 @@ class ShogiBoard:
                 obj_piece = self.PIECES[piece_name.upper()](piece_name.upper(), player.team)
 
             board[drop_r][drop_c] = obj_piece
+
+            # TODO: Debug is_in_check and get_all_evade_moves
             if self.is_in_check(player) and len(self.get_all_evade_moves(player)) == 0:
                 return False
+            
             board[drop_r][drop_c] = None
 
         return True
@@ -226,8 +229,8 @@ class ShogiBoard:
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
                 if cell in all_opponent_pieces:
-                    obj_cell = self.PIECES[cell.upper()](cell, player.team)
-                    valid_moves = obj_cell.get_valid_moves((r, c), board)
+                    opponent_piece = self.PIECES[cell.upper()](cell, -player.team)
+                    valid_moves = opponent_piece.get_valid_moves((r, c), board)
                     all_opponent_moves.append(valid_moves)
 
         return king_pos in all_opponent_moves
@@ -245,8 +248,8 @@ class ShogiBoard:
         for r, row in enumerate(board):
             for c, cell in enumerate(row):
                 if cell in all_opponent_pieces:
-                    obj_cell = self.PIECES[cell.upper()](cell, player.team)
-                    valid_moves = obj_cell.get_valid_moves((r, c), self.board)
+                    opponent_piece = self.PIECES[cell.upper()](cell, -player.team)
+                    valid_moves = opponent_piece.get_valid_moves((r, c), board)
                     all_opponent_moves.append(valid_moves)
         
         king_r, king_c = king_pos
@@ -269,8 +272,8 @@ class ShogiBoard:
         for src_r, row in enumerate(board):
             for src_c, cell in enumerate(row):
                 if cell in all_our_pieces:
-                    obj_cell = self.PIECES[cell.upper()](cell, player.team)
-                    valid_moves = obj_cell.get_valid_moves((src_r, src_c), board)
+                    our_piece = self.PIECES[cell.upper()](cell, player.team)
+                    valid_moves = our_piece.get_valid_moves((src_r, src_c), board)
                     all_our_moves.append(valid_moves)
 
         for move in all_our_moves:
@@ -279,9 +282,9 @@ class ShogiBoard:
 
             # 先移動看看
             piece = board[src_r][src_c]
-            board[src_r][src_c] = None
             if is_promoted:
                 piece.promoted = True
+            board[src_r][src_c] = None
             board[dst_r][dst_c] = piece
 
             if not self.is_in_check(player):  # 檢查移動後王將是否仍然被將軍
@@ -289,9 +292,9 @@ class ShogiBoard:
 
             # 檢查後盤面需復原
             piece = board[dst_r][dst_c]
-            board[dst_r][dst_c] = None
             if is_promoted:
                 piece.promoted = False
+            board[dst_r][dst_c] = None
             board[src_r][src_c] = piece
 
         return piece_evade_moves
@@ -309,7 +312,7 @@ class ShogiBoard:
 
                 # 先打入看看
                 if self._can_drop_piece(piece_name, drop_pos, player):
-                    board[dst_r][dst_c] = piece_name
+                    board[dst_r][dst_c] = self.PIECES[piece_name.upper()](piece_name, player.team)
 
                 if not self.is_in_check(player):  # 檢查移動後王將是否仍然被將軍
                     move = parse_drop_to_string(piece_name, drop_pos)
