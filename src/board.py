@@ -1,8 +1,8 @@
 from typing import Tuple, List, Set
 
-from .utils import parse_string_to_pos, parse_drop_to_string
-from .piece import *
-from .player import ShogiPlayer
+from src.utils import parse_string_to_pos, parse_drop_to_string
+from src.piece import *
+from src.player import ShogiPlayer
 
 import copy
 

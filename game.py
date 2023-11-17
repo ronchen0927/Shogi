@@ -1,6 +1,6 @@
-from .player import ShogiPlayer
-from .board import ShogiBoard
-from .piece import *
+from src.player import ShogiPlayer
+from src.board import ShogiBoard
+from src.piece import *
 
 class ShogiGame:
     def __init__(self) -> None:
