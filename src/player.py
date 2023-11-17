@@ -1,5 +1,6 @@
 from typing import List, Optional
-from piece import ShogiPiece
+
+from .piece import ShogiPiece
 
 class ShogiPlayer:
     def __init__(self, name, team: int, captured: Optional[List[str]] = None) -> None:

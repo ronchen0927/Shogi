@@ -1,6 +1,7 @@
 from typing import Tuple, List
 from abc import ABCMeta, abstractmethod
-from utils import is_in_board, parse_pos_to_string
+
+from .utils import is_in_board, parse_pos_to_string
 
 class ShogiPiece:
     __metaclass__ = ABCMeta

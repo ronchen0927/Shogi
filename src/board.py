@@ -1,8 +1,8 @@
 from typing import Tuple, List, Set
-from collections import defaultdict
-from utils import parse_string_to_pos, parse_drop_to_string
-from piece import *
-from player import ShogiPlayer
+
+from .utils import parse_string_to_pos, parse_drop_to_string
+from .piece import *
+from .player import ShogiPlayer
 
 import copy
 
@@ -343,10 +343,7 @@ class ShogiBoard:
 
     def get_all_king_evade_moves(self, player: ShogiPlayer):
         king_evade_moves = self._get_king_evade_moves(player)
-        print("1:", king_evade_moves)
         king_evade_moves &= self._get_piece_evade_moves(player)
-        print("2:", king_evade_moves)
         king_evade_moves |= self._get_drop_evade_moves(player)
-        print("3:", king_evade_moves)
 
         return king_evade_moves
