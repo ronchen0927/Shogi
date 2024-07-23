@@ -1,3 +1,5 @@
+import copy
+
 from game import *
 
 
@@ -17,10 +19,10 @@ def test_uchifuzume():
     game.board.insert_board(uchifuzume_board)
     game.players[0].captured = ['P', 'P', 'P', 'P', 'P', 'N', 'G', 'G']
     game.players[1].captured = ['p']
-    game.board.our_king_pos = (5, 1)
-    game.board.opponent_king_pos = (1, 6)
 
     game.board.execute_move('i1i3', game.players[0])
     game.board.execute_move('p*b5', game.players[1])
 
-    assert game.get_game_ended(game.players[0], game.players[1]) == -1  # opponent player win
+    board = copy.deepcopy(game.board.board)
+
+    assert game.get_game_ended(board, game.players[0], game.players[1]) == -1  # opponent player win
