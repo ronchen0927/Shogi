@@ -2,6 +2,8 @@ from src.player import ShogiPlayer
 from src.board import ShogiBoard
 from src.piece import *
 
+import copy
+
 class ShogiGame:
     def __init__(self) -> None:
         self.players = [ShogiPlayer("Gojo Satoru", 1), ShogiPlayer("Geto Suguru", -1)]
@@ -10,10 +12,12 @@ class ShogiGame:
         self.game_round = 0
 
 
-    def get_game_ended(self, our_player: ShogiPlayer, opponent_player: ShogiPlayer) -> int:            
+    def get_game_ended(self, board: List[List[str]], our_player: ShogiPlayer, opponent_player: ShogiPlayer) -> int:            
         '''
         Input:
-            player: current player (1 or -1)
+            board: 2D list of ShogiPiece objects
+            our_player: 1
+            opponent_player: -1
 
         Returns:
             result: 0 if game has not ended. 1 if player won, -1 if player lost,
@@ -22,14 +26,14 @@ class ShogiGame:
         result = 0
 
         # 先檢查我方是否被將死
-        is_our_king_check = self.board.is_in_check(our_player)
-        our_all_evade_moves = self.board.get_all_king_evade_moves(our_player)
+        is_our_king_check = self.board.is_in_check(board, our_player)
+        our_all_evade_moves = self.board.get_all_king_evade_moves(board, our_player)
         if 'k' in opponent_player.captured or (is_our_king_check and len(our_all_evade_moves) == 0):
             result = opponent_player.team
 
         # 再檢查敵方是否被將死
-        is_opponent_king_check = self.board.is_in_check(opponent_player)
-        opponent_all_evade_moves = self.board.get_all_king_evade_moves(opponent_player)
+        is_opponent_king_check = self.board.is_in_check(board, opponent_player)
+        opponent_all_evade_moves = self.board.get_all_king_evade_moves(board, opponent_player)
         if 'K' in our_player.captured or (is_opponent_king_check and len(opponent_all_evade_moves) == 0):
             result = our_player.team
 
@@ -47,7 +51,8 @@ class ShogiGame:
 
             try:
                 self.board.execute_move(input_move, self.current_player)
-                result = self.get_game_ended(self.players[0], self.players[1])
+                board = copy.deepcopy(self.board)
+                result = self.get_game_ended(board, self.players[0], self.players[1])
 
                 if result:
                     # Game over
